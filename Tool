@@ -1,7 +1,7 @@
 local Tool = script.Parent
 
-Tool.Equipped:Connect(function()
-    local Player = game.Players.LocalPlayer
+Tool.Equipped:Connect(function(mouse)
+    local Player = Tool.Parent.Parent
     local Character = Player.Character or Player.CharacterAdded:Wait()
     local HRP = Character:WaitForChild("HumanoidRootPart")
 
