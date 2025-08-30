@@ -1,0 +1,471 @@
+local Player = game.Players.LocalPlayer
+
+local function SetupCharacterAnimations(Character)
+    local Humanoid = Character:WaitForChild("Humanoid")
+
+    local IdleAnim = Instance.new("Animation")
+    IdleAnim.AnimationId = "rbxassetid://136087809701317"
+
+    local RunAnim = Instance.new("Animation")
+    RunAnim.AnimationId = "rbxassetid://121350640829746"
+
+    local Animator = Humanoid:FindFirstChildOfClass("Animator")
+    if not Animator then
+        Animator = Instance.new("Animator")
+        Animator.Parent = Humanoid
+    end
+
+    local IdleTrack = Animator:LoadAnimation(IdleAnim)
+    IdleTrack.Looped = true
+
+    local RunTrack = Animator:LoadAnimation(RunAnim)
+    RunTrack.Priority = Enum.AnimationPriority.Action
+
+    local MaxSpeed = 48
+    local IdleEnabled = true
+
+    local AttachSource = game.ReplicatedStorage.Resources.CrushingPushFinisher.Charge.Charge.Attachment
+    local AttachClone = AttachSource:Clone()
+    AttachClone.Parent = Character:WaitForChild("RightHand")
+
+    for _, child in ipairs(AttachClone:GetChildren()) do
+        if child:IsA("ParticleEmitter") then
+            child.Enabled = false
+        end
+    end
+
+    local IdleConnection
+    IdleConnection = game:GetService("RunService").RenderStepped:Connect(function()
+        local root = Character:FindFirstChild("HumanoidRootPart")
+        if IdleEnabled and root then
+            if root.Velocity.Magnitude < 0.1 then
+                if not IdleTrack.IsPlaying then
+                    IdleTrack:Play()
+                end
+                for _, child in ipairs(AttachClone:GetChildren()) do
+                    if child:IsA("ParticleEmitter") then
+                        child.Enabled = true
+                    end
+                end
+            else
+                if IdleTrack.IsPlaying then
+                    IdleTrack:Stop()
+                end
+                for _, child in ipairs(AttachClone:GetChildren()) do
+                    if child:IsA("ParticleEmitter") then
+                        child.Enabled = false
+                    end
+                end
+            end
+        else
+            for _, child in ipairs(AttachClone:GetChildren()) do
+                if child:IsA("ParticleEmitter") then
+                    child.Enabled = false
+                end
+            end
+        end
+    end)
+
+    local RunConnection
+    RunConnection = game:GetService("RunService").RenderStepped:Connect(function()
+        local speed = Humanoid.MoveDirection.Magnitude * Humanoid.WalkSpeed
+        if speed > 0 then
+            if not RunTrack.IsPlaying then
+                RunTrack:Play()
+            end
+            RunTrack:AdjustSpeed(math.clamp(speed / MaxSpeed, 0, 1))
+        elseif RunTrack.IsPlaying then
+            RunTrack:Stop()
+        end
+    end)
+
+    return {
+        IdleTrack = IdleTrack,
+        RunTrack = RunTrack,
+        ToggleIdle = function(state)
+            IdleEnabled = state
+            if not state and IdleTrack.IsPlaying then
+                IdleTrack:Stop()
+            end
+            for _, child in ipairs(AttachClone:GetChildren()) do
+                if child:IsA("ParticleEmitter") then
+                    child.Enabled = state
+                end
+            end
+        end,
+        Disconnect = function()
+            IdleConnection:Disconnect()
+            RunConnection:Disconnect()
+        end
+    }
+end
+
+local AnimController
+
+local function SetupForCharacter(Char)
+    if AnimController then
+        AnimController.Disconnect()
+    end
+    AnimController = SetupCharacterAnimations(Char)
+end
+
+if Player.Character then
+    SetupForCharacter(Player.Character)
+end
+
+Player.CharacterAdded:Connect(function(Char)
+    SetupForCharacter(Char)
+end)
+
+local v9 = game:service("CollectionService")
+local v10 = game:service("TweenService")
+local _ = game:GetService("PhysicsService")
+local v12 = nil
+local v13 = {}
+_ = {}
+
+local v1 = game:GetService("SoundService")
+local v2 = v1:FindFirstChild("Sounds")
+if not v2 then
+    v2 = Instance.new("Folder")
+    v2.Name = "Sounds"
+    v2.Parent = v1
+end
+
+local vDefaultGroup = v1:FindFirstChild("Default")
+if not vDefaultGroup then
+    vDefaultGroup = Instance.new("SoundGroup")
+    vDefaultGroup.Name = "Default"
+    vDefaultGroup.Parent = v1
+end
+
+local function v321(v315)
+    local l_Sound_0 = Instance.new("Sound")
+    l_Sound_0.SoundGroup = vDefaultGroup
+    v9:AddTag(l_Sound_0, "NewSound")
+
+    if v315.AddTo then
+        table.insert(v315.AddTo, l_Sound_0)
+        v315.AddTo = nil
+    end
+
+    local v317 = nil
+    local v318 = nil
+    v318 = l_Sound_0.Ended:Connect(function()
+        if l_Sound_0 then
+            l_Sound_0:Destroy()
+        end
+        if v317 then
+            v317:Destroy()
+        end
+        v318:Disconnect()
+    end)
+
+    if not v315.RollOffMaxDistance then
+        v315.RollOffMaxDistance = 300
+    end
+
+    if v315.CFrame then
+        v317 = Instance.new("Attachment")
+        v317.Parent = workspace.Terrain
+        v317.WorldCFrame = v315.CFrame
+        v315.Parent = v317
+    end
+    v315.CFrame = nil
+
+    for v319, v320 in pairs(v315) do
+        l_Sound_0[v319] = v320
+    end
+
+    return l_Sound_0, v317
+end
+
+shared.sfx = v321
+local l_LocalPlayer_0 = game.Players.LocalPlayer;
+local v1101 = {};
+v1101.char = l_LocalPlayer_0.Character or l_LocalPlayer_0.CharacterAdded:Wait();
+
+local function PlaySFX()
+    local s = shared.sfx({
+        SoundId = "rbxassetid://5693220817",
+        Volume = 2,
+        PlaybackSpeed = 1,
+        RollOffMaxDistance = 300,
+        CFrame = v1101.char:WaitForChild("HumanoidRootPart").CFrame
+    })
+    s:Play()
+end
+
+PlaySFX()
+
+l_LocalPlayer_0.CharacterAdded:Connect(function(char)
+    v1101.char = char
+    PlaySFX()
+end)
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+
+local function SpawnEvent()
+
+local Test = game.ReplicatedStorage.Resources.FinalEffects.VictimHit.Root.Center
+
+local test = Test:Clone()
+test.Parent = game.Players.LocalPlayer.Character:WaitForChild("HumanoidRootPart")
+
+for _, child in ipairs(test:GetChildren()) do
+    if child:IsA("ParticleEmitter") then
+        child:Emit(15)
+        child.Enabled = false
+    end
+end
+
+local Test = game.ReplicatedStorage.Resources.NinjaUlt.End_Effects.Grounded.Root.Attachment
+
+local test = Test:Clone()
+test.Parent = game.Players.LocalPlayer.Character:WaitForChild("HumanoidRootPart")
+
+for _, child in ipairs(test:GetChildren()) do
+    if child:IsA("ParticleEmitter") then
+        child:Emit(15)
+        child.Enabled = false
+    end
+end
+
+local Test = game.ReplicatedStorage.Resources.IceHammer.spawn.spawn.Attachment
+
+local test = Test:Clone()
+test.Parent = game.Players.LocalPlayer.Character:WaitForChild("HumanoidRootPart")
+
+for _, child in ipairs(test:GetChildren()) do
+    if child:IsA("ParticleEmitter") then
+        child:Emit(15)
+        child.Enabled = false
+    end
+end
+
+local HandGlint = game.ReplicatedStorage.Resources.IceHammer.HammerExtra.Attachment
+
+local glinter = HandGlint:Clone()
+glinter.Parent = game.Players.LocalPlayer.Character:WaitForChild("HumanoidRootPart")
+
+for _, child in ipairs(glinter:GetChildren()) do
+    child:Emit(15)
+    child.Enabled = false
+end
+
+    local player = Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "Marking"
+    highlight.Parent = character
+    highlight.Adornee = character
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.OutlineTransparency = 0.5
+    highlight.FillColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillTransparency = 0.5
+
+    task.delay(1.5, function()
+        local tweenInfo = TweenInfo.new(2.4, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+        local goal = {OutlineTransparency = 1, FillTransparency = 1}
+        local tween = TweenService:Create(highlight, tweenInfo, goal)
+        tween:Play()
+        tween.Completed:Connect(function()
+            highlight:Destroy()
+        end)
+    end)
+end
+
+Players.LocalPlayer.CharacterAdded:Connect(SpawnEvent)
+if Players.LocalPlayer.Character then
+    SpawnEvent()
+end
+
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+local spotlight = Instance.new("SpotLight")
+spotlight.Parent = humanoidRootPart
+spotlight.Color = Color3.fromRGB(0, 255, 255)
+spotlight.Brightness = 5
+spotlight.Range = 15
+spotlight.Angle = 60
+spotlight.Face = Enum.NormalId.Top
+spotlight.Shadows = true
+
+local humanoid = character:WaitForChild("Humanoid")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+
+Lighting.Brightness = 2
+
+local function makeTrail(part)
+    local att1 = Instance.new("Attachment")
+    att1.Name = part.Name.."Attachment1"
+    att1.Parent = part
+
+    local att2 = Instance.new("Attachment")
+    att2.Name = part.Name.."Attachment2"
+    att2.Parent = part
+    att2.Position = Vector3.new(0, 0.5, 0)
+
+    local trail = Instance.new("Trail")
+    trail.Name = part.Name.."Trail"
+    trail.Attachment0 = att1
+    trail.Attachment1 = att2
+    trail.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 255, 255)), -- changed to cyan
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 255, 255))
+    })
+    trail.FaceCamera = true
+    trail.LightEmission = 300
+    trail.LightInfluence = 300
+    trail.Texture = "rbxassetid://10466997318"
+    trail.TextureMode = Enum.TextureMode.Static
+    trail.TextureLength = 10
+    trail.Lifetime = 0.5
+    trail.MaxLength = 0
+    trail.MinLength = 0.1
+    trail.WidthScale = NumberSequence.new({
+        NumberSequenceKeypoint.new(0,0),
+        NumberSequenceKeypoint.new(0.5,1),
+        NumberSequenceKeypoint.new(1,0)
+    })
+    trail.Parent = part
+end
+
+for _, part in ipairs(character:GetChildren()) do
+    if part:IsA("BasePart") then
+        for i = 1, 80 do
+            makeTrail(part)
+        end
+    end
+end
+
+RunService.Heartbeat:Connect(function()
+    humanoid.WalkSpeed = 400
+end)
+
+local Player = game.Players.LocalPlayer
+local Backpack = Player:WaitForChild("Backpack")
+
+local function GiveTectonicTempo()
+    local Character = Player.Character or Player.CharacterAdded:Wait()
+    local HRP = Character:WaitForChild("HumanoidRootPart")
+
+    local Tool = Instance.new("Tool")
+    Tool.Name = "Tectonic Tempo"
+    Tool.RequiresHandle = false
+    Tool.Parent = Backpack
+
+    local cooldown = 10
+    local canUse = true
+
+    local initialEffects = {
+        game.ReplicatedStorage.Resources.HeadFirstFinisher.Tornado.tonado.Attachment,
+        game.ReplicatedStorage.Resources.Tornado.Effects.SmallSpinEmit.Attachment,
+        game.ReplicatedStorage.Resources.Tornado.Effects.MiddleSpinEmit.Attachment,
+        game.ReplicatedStorage.Resources.Tornado.Effects.BigSpinEmit.Emit,
+        game.ReplicatedStorage.Resources.SplitSecond.FlowerBlastNew.FlowerBlast.Windy,
+        game.ReplicatedStorage.Resources.Fang.RockExplode.GoodSmoke3.Attachment
+    }
+
+    local function EmitParticles(attachment, amount)
+        local clone = attachment:Clone()
+        clone.Parent = HRP
+        for _, child in ipairs(clone:GetChildren()) do
+            if child:IsA("ParticleEmitter") then
+                child:Emit(amount)
+                child.Enabled = true
+            end
+        end
+        return clone
+    end
+
+    local function ActivateTectonicTempo()
+        if not canUse then return end
+        canUse = false
+        local activeEffects = {}
+        for _, effect in ipairs(initialEffects) do
+            table.insert(activeEffects, EmitParticles(effect, 5))
+        end
+
+local sound = Instance.new("Sound")
+sound.SoundId = "rbxassetid://115275659580595"
+sound.Volume = 2
+sound.Parent = workspace:WaitForChild("HumanoidRootPart")
+sound:Play()
+
+        local hitbox = Instance.new("Part")
+        hitbox.Size = Vector3.new(40,40,40)
+        hitbox.CFrame = HRP.CFrame
+        hitbox.Transparency = 1
+        hitbox.Anchored = true
+        hitbox.CanCollide = false
+        hitbox.Parent = workspace
+        local affectedHumanoids = {}
+        local RunService = game:GetService("RunService")
+        local dtAccumulator = 0
+        local dmgConnection
+        dmgConnection = RunService.Stepped:Connect(function(_, dt)
+            dtAccumulator = dtAccumulator + dt
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj:IsA("Humanoid") and obj.Parent ~= Character then
+                    local torso = obj.Parent:FindFirstChild("HumanoidRootPart")
+                    if torso and (torso.Position - hitbox.Position).Magnitude <= 20 then
+                        if not affectedHumanoids[obj] then
+                            affectedHumanoids[obj] = torso
+                            torso.Anchored = true
+                        end
+                        torso.CFrame = torso.CFrame + Vector3.new(0, dt*3, 0)
+                    end
+                end
+            end
+            if dtAccumulator >= 0.3 then
+                for humanoid,_ in pairs(affectedHumanoids) do
+                    humanoid:TakeDamage(4)
+                end
+                dtAccumulator = 0
+            end
+        end)
+        wait(1)
+        for _, effect in ipairs(activeEffects) do
+            if effect and effect.Parent then
+                effect:Destroy()
+            end
+        end
+        dmgConnection:Disconnect()
+        hitbox:Destroy()
+        local finalEffect = game.ReplicatedStorage.Resources.IceSpear.explode.explode.explosion
+        local explosionClone = finalEffect:Clone()
+        explosionClone.Parent = HRP
+        for _, child in ipairs(explosionClone:GetChildren()) do
+            if child:IsA("ParticleEmitter") then
+                child:Emit(15)
+                child.Enabled = false
+            end
+        end
+        for humanoid, torso in pairs(affectedHumanoids) do
+            if humanoid.Parent and torso then
+                torso.Anchored = false
+                local direction = (torso.Position - HRP.Position).Unit
+                if direction.Magnitude == 0 then direction = Vector3.new(0,1,0) end
+                local bodyVelocity = Instance.new("BodyVelocity")
+                bodyVelocity.Velocity = direction*30 + Vector3.new(0,20,0)
+                bodyVelocity.MaxForce = Vector3.new(1e5,1e5,1e5)
+                bodyVelocity.Parent = torso
+                humanoid:TakeDamage(10)
+                game.Debris:AddItem(bodyVelocity,0.5)
+            end
+        end
+        wait(cooldown)
+        canUse = true
+    end
+
+    Tool.Equipped:Connect(ActivateTectonicTempo)
+end
+
+GiveTectonicTempo()
+Player.CharacterAdded:Connect(GiveTectonicTempo)
