@@ -1,26 +1,29 @@
 local Tool = script.Parent
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Debris = game:GetService("Debris")
 
-Tool.Equipped:Connect(function(mouse)
-    local Player = Tool.Parent.Parent
+Tool.Equipped:Connect(function()
+    local Player = Players.LocalPlayer
     local Character = Player.Character or Player.CharacterAdded:Wait()
     local HRP = Character:WaitForChild("HumanoidRootPart")
 
     local initialEffects = {
-        game.ReplicatedStorage.Resources.HeadFirstFinisher.Tornado.tonado.Attachment,
-        game.ReplicatedStorage.Resources.Tornado.Effects.SmallSpinEmit.Attachment,
-        game.ReplicatedStorage.Resources.Tornado.Effects.MiddleSpinEmit.Attachment,
-        game.ReplicatedStorage.Resources.Tornado.Effects.BigSpinEmit.Emit,
+        game.ReplicatedStorage.Resources.HeadFirstFinisher.Tornado.tonado,
+        game.ReplicatedStorage.Resources.Tornado.Effects.SmallSpinEmit,
+        game.ReplicatedStorage.Resources.Tornado.Effects.MiddleSpinEmit,
+        game.ReplicatedStorage.Resources.Tornado.Effects.BigSpinEmit,
         game.ReplicatedStorage.Resources.SplitSecond.FlowerBlastNew.FlowerBlast.Windy,
-        game.ReplicatedStorage.Resources.Fang.RockExplode.GoodSmoke3.Attachment
+        game.ReplicatedStorage.Resources.Fang.RockExplode.GoodSmoke3
     }
 
-    local function EmitParticles(attachment, amount)
-        local clone = attachment:Clone()
+    local function EmitParticles(effect, amount)
+        local clone = effect:Clone()
         clone.Parent = HRP
         for _, child in ipairs(clone:GetChildren()) do
             if child:IsA("ParticleEmitter") then
-                child:Emit(amount)
                 child.Enabled = true
+                child:Emit(amount)
             end
         end
         return clone
@@ -40,7 +43,6 @@ Tool.Equipped:Connect(function(mouse)
     hitbox.Parent = workspace
 
     local affectedHumanoids = {}
-    local RunService = game:GetService("RunService")
     local dtAccumulator = 0
 
     local dmgConnection
@@ -60,7 +62,7 @@ Tool.Equipped:Connect(function(mouse)
         end
         if dtAccumulator >= 0.3 then
             for humanoid, _ in pairs(affectedHumanoids) do
-                humanoid:TakeDamage(4)
+                humanoid:TakeDamage(0.4)
             end
             dtAccumulator = 0
         end
@@ -77,13 +79,13 @@ Tool.Equipped:Connect(function(mouse)
     dmgConnection:Disconnect()
     hitbox:Destroy()
 
-    local finalEffect = game.ReplicatedStorage.Resources.IceSpear.explode.explode.explosion
+    local finalEffect = game.ReplicatedStorage.Resources.IceSpear.explode.explode
     local explosionClone = finalEffect:Clone()
     explosionClone.Parent = HRP
     for _, child in ipairs(explosionClone:GetChildren()) do
         if child:IsA("ParticleEmitter") then
+            child.Enabled = true
             child:Emit(15)
-            child.Enabled = false
         end
     end
 
@@ -97,7 +99,7 @@ Tool.Equipped:Connect(function(mouse)
             bodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
             bodyVelocity.Parent = torso
             humanoid:TakeDamage(10)
-            game.Debris:AddItem(bodyVelocity, 0.5)
+            Debris:AddItem(bodyVelocity, 0.5)
         end
     end
 end)
