@@ -1,0 +1,103 @@
+local Tool = script.Parent
+
+Tool.Equipped:Connect(function()
+    local Player = game.Players.LocalPlayer
+    local Character = Player.Character or Player.CharacterAdded:Wait()
+    local HRP = Character:WaitForChild("HumanoidRootPart")
+
+    local initialEffects = {
+        game.ReplicatedStorage.Resources.HeadFirstFinisher.Tornado.tonado.Attachment,
+        game.ReplicatedStorage.Resources.Tornado.Effects.SmallSpinEmit.Attachment,
+        game.ReplicatedStorage.Resources.Tornado.Effects.MiddleSpinEmit.Attachment,
+        game.ReplicatedStorage.Resources.Tornado.Effects.BigSpinEmit.Emit,
+        game.ReplicatedStorage.Resources.SplitSecond.FlowerBlastNew.FlowerBlast.Windy,
+        game.ReplicatedStorage.Resources.Fang.RockExplode.GoodSmoke3.Attachment
+    }
+
+    local function EmitParticles(attachment, amount)
+        local clone = attachment:Clone()
+        clone.Parent = HRP
+        for _, child in ipairs(clone:GetChildren()) do
+            if child:IsA("ParticleEmitter") then
+                child:Emit(amount)
+                child.Enabled = true
+            end
+        end
+        return clone
+    end
+
+    local activeEffects = {}
+    for _, effect in ipairs(initialEffects) do
+        table.insert(activeEffects, EmitParticles(effect, 5))
+    end
+
+    local hitbox = Instance.new("Part")
+    hitbox.Size = Vector3.new(40, 40, 40)
+    hitbox.CFrame = HRP.CFrame
+    hitbox.Transparency = 1
+    hitbox.Anchored = true
+    hitbox.CanCollide = false
+    hitbox.Parent = workspace
+
+    local affectedHumanoids = {}
+    local RunService = game:GetService("RunService")
+    local dtAccumulator = 0
+
+    local dmgConnection
+    dmgConnection = RunService.Stepped:Connect(function(_, dt)
+        dtAccumulator = dtAccumulator + dt
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("Humanoid") and obj.Parent ~= Character then
+                local torso = obj.Parent:FindFirstChild("HumanoidRootPart")
+                if torso and (torso.Position - hitbox.Position).Magnitude <= 20 then
+                    if not affectedHumanoids[obj] then
+                        affectedHumanoids[obj] = torso
+                        torso.Anchored = true
+                    end
+                    torso.CFrame = torso.CFrame + Vector3.new(0, dt * 3, 0)
+                end
+            end
+        end
+        if dtAccumulator >= 0.3 then
+            for humanoid, _ in pairs(affectedHumanoids) do
+                humanoid:TakeDamage(4)
+            end
+            dtAccumulator = 0
+        end
+    end)
+
+    wait(1)
+
+    for _, effect in ipairs(activeEffects) do
+        if effect and effect.Parent then
+            effect:Destroy()
+        end
+    end
+
+    dmgConnection:Disconnect()
+    hitbox:Destroy()
+
+    local finalEffect = game.ReplicatedStorage.Resources.IceSpear.explode.explode.explosion
+    local explosionClone = finalEffect:Clone()
+    explosionClone.Parent = HRP
+    for _, child in ipairs(explosionClone:GetChildren()) do
+        if child:IsA("ParticleEmitter") then
+            child:Emit(15)
+            child.Enabled = false
+        end
+    end
+
+    for humanoid, torso in pairs(affectedHumanoids) do
+        if humanoid.Parent and torso then
+            torso.Anchored = false
+            local direction = (torso.Position - HRP.Position).Unit
+            if direction.Magnitude == 0 then direction = Vector3.new(0, 1, 0) end
+            local bodyVelocity = Instance.new("BodyVelocity")
+            bodyVelocity.Velocity = direction * 30 + Vector3.new(0, 20, 0)
+            bodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+            bodyVelocity.Parent = torso
+            humanoid:TakeDamage(10)
+            game.Debris:AddItem(bodyVelocity, 0.5)
+        end
+    end
+end)
